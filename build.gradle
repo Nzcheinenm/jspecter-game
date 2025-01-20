@@ -13,7 +13,7 @@ java {
     targetCompatibility = '17'
 }
 
-ext.jmonkeyengineVersion = '3.7.0-stable'
+ext.jmonkeyengineVersion = '3.8.0-SNAPSHOT'
 
 mainClassName = 'nzch.Jspectergame'
 if (!hasProperty('mainClass')) {
@@ -39,13 +39,14 @@ dependencies {
 
     implementation 'org.jmonkeyengine:jme3-core:' + jmonkeyengineVersion
     implementation 'org.jmonkeyengine:jme3-desktop:' + jmonkeyengineVersion
-    runtimeOnly 'org.jmonkeyengine:jme3-jogg:' + jmonkeyengineVersion
-    runtimeOnly 'org.jmonkeyengine:jme3-plugins:' + jmonkeyengineVersion
+    runtimeOnly 'org.jmonkeyengine:jme3-jogg:' + '3.7.0-stable'
+    runtimeOnly 'org.jmonkeyengine:jme3-plugins:' + '3.7.0-stable'
 
-    implementation 'org.jmonkeyengine:jme3-terrain:' + jmonkeyengineVersion
-    implementation 'org.jmonkeyengine:jme3-effects:' + jmonkeyengineVersion
-    runtimeOnly 'org.jmonkeyengine:jme3-lwjgl3:' + jmonkeyengineVersion
+    implementation 'org.jmonkeyengine:jme3-terrain:' + '3.7.0-stable'
+    implementation 'org.jmonkeyengine:jme3-effects:' + '3.7.0-stable'
+    runtimeOnly 'org.jmonkeyengine:jme3-lwjgl3:' + '3.7.0-stable'
 
+    implementation "com.github.benckx:ouistiti:2.1.1"
     implementation "com.github.stephengold:Wes:0.7.2"
     implementation 'com.simsilica:lemur:1.16.0'
     implementation 'com.simsilica:lemur-proto:1.13.0'
@@ -54,8 +55,10 @@ dependencies {
     implementation 'com.github.stephengold:Minie:7.4.0'
     implementation 'org.apache.logging.log4j:log4j-core:2.24.3'
     implementation 'org.apache.logging.log4j:log4j-api:2.24.3'
-//    implementation 'com.rvandoosselaer:blocks:1.7.0'
     implementation 'com.github.stephengold:Minie:8.2.0'
+//    implementation 'com.github.neph1:SsrFilter:Tag'
+//    implementation 'com.rvandoosselaer:blocks:1.7.0'
+
 }
 
 distZip {
