@@ -4,6 +4,7 @@ import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
+import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
@@ -28,21 +29,31 @@ public class NPC {
     private void createNPC(AssetManager assetManager) {
         npcNode = new Node("NPC_" + name);
 
-        // Тело NPC
+        // Тело NPC с освещаемым материалом
         Box body = new Box(0.4f, 0.8f, 0.4f);
         Geometry bodyGeo = new Geometry("Body", body);
-        Material bodyMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        bodyMat.setColor("Color", ColorRGBA.Red); // NPC красного цвета
+        Material bodyMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+        bodyMat.setBoolean("UseMaterialColors", true);
+        bodyMat.setColor("Ambient", ColorRGBA.Red);
+        bodyMat.setColor("Diffuse", ColorRGBA.Red);
+        bodyMat.setColor("Specular", ColorRGBA.White);
+        bodyMat.setFloat("Shininess", 16f);
         bodyGeo.setMaterial(bodyMat);
         bodyGeo.setLocalTranslation(0, 0.8f, 0);
+        bodyGeo.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
 
         // Голова NPC
         Sphere head = new Sphere(16, 16, 0.3f);
         Geometry headGeo = new Geometry("Head", head);
-        Material headMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        headMat.setColor("Color", ColorRGBA.Pink);
+        Material headMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+        headMat.setBoolean("UseMaterialColors", true);
+        headMat.setColor("Ambient", ColorRGBA.Pink);
+        headMat.setColor("Diffuse", ColorRGBA.Pink);
+        headMat.setColor("Specular", ColorRGBA.White);
+        headMat.setFloat("Shininess", 32f);
         headGeo.setMaterial(headMat);
         headGeo.setLocalTranslation(0, 1.8f, 0);
+        headGeo.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
 
         npcNode.attachChild(bodyGeo);
         npcNode.attachChild(headGeo);
