@@ -1,8 +1,10 @@
 package nzch;
 
 import com.jme3.app.SimpleApplication;
+import com.jme3.asset.AssetManager;
 import com.jme3.collision.CollisionResult;
 import com.jme3.collision.CollisionResults;
+import com.jme3.font.BitmapFont;
 import com.jme3.input.KeyInput;
 import com.jme3.input.MouseInput;
 import com.jme3.input.controls.ActionListener;
@@ -16,17 +18,31 @@ import com.jme3.math.*;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Box;
 import com.jme3.scene.shape.Sphere;
 import com.jme3.shadow.DirectionalLightShadowRenderer;
+import com.jme3.system.AppSettings;
 import nzch.camera.IsometricCameraController;
+import nzch.character.CombatCharacter;
+import nzch.character.Enemy;
+import nzch.character.NPC;
+import nzch.character.PlayerCombatCharacter;
 import nzch.manager.NPCManager;
-import nzch.systems.DialogueSystem;
-import nzch.systems.NPC;
+import nzch.system.BattleSystem;
+import nzch.system.DialogueSystem;
+import nzch.system.GridSystem;
 import nzch.ui.DialogueUI;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Timer;
 
 public class Jspectergame extends SimpleApplication {
 
+    public static final int HEALTH = 50;
+    public static final int ATTACK = 25;
+    public static final int ARMOR = 16;
     public DialogueSystem dialogueSystem;
     private Node player;
     private Vector3f targetPosition;
@@ -37,36 +53,43 @@ public class Jspectergame extends SimpleApplication {
     private DialogueUI dialogueUI;
     private NPC currentInteractingNPC;
     private DirectionalLightShadowRenderer shadowRenderer;
-
-    public static void main(String[] args) {
-        Jspectergame app = new Jspectergame();
-        app.start();
-    }
-
-    // Добавляем поля для освещения
+    private Timer gameTimer;
+    private BattleSystem battleSystem;
+    private boolean inCombat = false;
+    private List<CombatCharacter> combatCharacters;
+    private CombatCharacter currentTurnCharacter;
+    private GridSystem gridSystem;
     private AmbientLight ambientLight;
     private DirectionalLight sunLight;
     private PointLight torchLight;
     private boolean lightingEnabled = true;
 
+    public static void main(String[] args) {
+        Jspectergame app = new Jspectergame();
+        // Настройки приложения
+        AppSettings settings = new AppSettings(true);
+        settings.setTitle("Изометрическая RPG"); // заголовок окна
+        settings.setResolution(1280, 720);// разрешение окна
+        settings.setFullscreen(false);           // оконный режим
+        settings.setVSync(true);                 // вертикальная синхронизация
+        settings.setSamples(4);                  // сглаживание (антиалиасинг)
+
+        app.setSettings(settings);
+        app.setShowSettings(false); // не показывать диалог настроек при запуске
+        app.start();
+    }
+
     @Override
     public void simpleInitApp() {
-        // Настройка изометрической камеры
+        combatCharacters = new ArrayList<>();
+        gameTimer = new java.util.Timer();
+
         setupIsometricCamera();
-
-        // Настройка освещения ДО создания объектов
+        setupBasicLighting();
         setupLighting();
-
-        // Создание игрового мира
         createWorld();
-
-        // Создание игрока
         createPlayer();
-
-        // Создание маркера цели
         createTargetMarker();
-
-        // Создаем специальные источники света
         createSpecialLights();
 
         // Инициализация систем
@@ -74,12 +97,219 @@ public class Jspectergame extends SimpleApplication {
         dialogueUI = new DialogueUI(guiNode, guiFont, this);
         npcManager = new NPCManager(rootNode, assetManager, this);
 
-        // Создание NPC
-        npcManager.createNPCs();
+        // Инициализация боевой системы
+        gridSystem = new GridSystem(rootNode, assetManager, 40, 40); // Увеличиваем сетку
+        battleSystem = new BattleSystem(this, gridSystem);
 
-        // Настройка управления
+        // Создание NPC и врагов
+        npcManager.createNPCs();
+        createEnemies();
+
         setupMouseInput();
         setupKeyboardInput();
+        setupCombatControls();
+
+        // Включаем сетку по умолчанию для отладки
+        gridSystem.toggleGrid();
+    }
+
+    public BitmapFont getGuiFont() {
+        return guiFont;
+    }
+
+    public Node getGuiNode() {
+        return guiNode;
+    }
+
+    public Node getRootNode() {
+        return rootNode;
+    }
+
+    public AssetManager getAssetManager() {
+        return assetManager;
+    }
+
+    public DialogueSystem getDialogueSystem() {
+        return dialogueSystem;
+    }
+
+    public Timer getTimerJdk() {
+        return this.gameTimer;
+    }
+
+    private void startNextTurn() {
+        System.out.println("=== ЗАПРОС СЛЕДУЮЩЕГО ХОДА ===");
+
+        currentTurnCharacter = battleSystem.getNextTurnCharacter();
+        if (currentTurnCharacter == null) {
+            System.out.println("Нет активных персонажей, завершаю бой");
+            endCombat();
+            return;
+        }
+
+        System.out.println("Текущий ход: " + currentTurnCharacter.getName() +
+                " (HP: " + currentTurnCharacter.getCurrentHealth() + ")");
+
+        // Проверяем, не мертв ли персонаж
+        if (!currentTurnCharacter.isAlive()) {
+            System.out.println("Персонаж мертв, ищу следующего...");
+            battleSystem.endTurn(currentTurnCharacter);
+            startNextTurn(); // Рекурсивно ищем следующего
+            return;
+        }
+
+        battleSystem.showAvailableActions(currentTurnCharacter);
+
+        if (currentTurnCharacter instanceof PlayerCombatCharacter) {
+            System.out.println(">>> ОЖИДАНИЕ ДЕЙСТВИЙ ИГРОКА <<<");
+            enablePlayerTurn();
+        } else {
+            System.out.println(">>> ВЫПОЛНЕНИЕ ХОДА ВРАГА <<<");
+            executeEnemyTurn((Enemy) currentTurnCharacter);
+        }
+    }
+
+    public void endCurrentTurn() {
+        System.out.println("--- ЗАВЕРШЕНИЕ ТЕКУЩЕГО ХОДА ---");
+        if (currentTurnCharacter != null) {
+            battleSystem.endTurn(currentTurnCharacter);
+            startNextTurn();
+        }
+    }
+
+    private void setupBasicLighting() {
+        // Яркое освещение чтобы избежать черного экрана
+        AmbientLight ambientLight = new AmbientLight();
+        ambientLight.setColor(new ColorRGBA(0.8f, 0.8f, 0.8f, 1.0f)); // Увеличиваем яркость
+        rootNode.addLight(ambientLight);
+
+        DirectionalLight sunLight = new DirectionalLight();
+        sunLight.setColor(new ColorRGBA(0.9f, 0.9f, 0.9f, 1.0f));
+        sunLight.setDirection(new Vector3f(-0.5f, -1f, -0.5f).normalizeLocal());
+        rootNode.addLight(sunLight);
+
+        // Убираем точечный свет если он вызывает проблемы
+        torchLight = new PointLight();
+        torchLight.setColor(new ColorRGBA(1.0f, 0.9f, 0.7f, 1.0f));
+        torchLight.setRadius(10f);
+        rootNode.addLight(torchLight);
+    }
+
+    private void createPlayer() {
+        // Загружаем модель игрока
+        Spatial playerModel = assetManager.loadModel("Models/character.obj");
+
+        // Создаем материал для модели (если нужно)
+        Material playerMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+        playerMat.setBoolean("UseMaterialColors", true);
+        playerMat.setColor("Ambient", ColorRGBA.White);
+        playerMat.setColor("Diffuse", ColorRGBA.Black);
+        playerModel.setMaterial(playerMat);
+
+        // Настраиваем масштаб модели (если она слишком большая/маленькая)
+        playerModel.setLocalScale(3f); // Подберите подходящий масштаб
+
+        // Затем поднимаем по оси Y
+        playerModel.setLocalTranslation(0, 1.0f, 0); // Поднимаем на 1 единицу вверх
+
+        // Разворачиваем модель если она лежит или повернута неправильно
+        setupModelOrientation(playerModel);
+
+        // Создаем корневой узел для игрока
+        player = new Node("Player");
+        player.attachChild(playerModel);
+        player.setLocalTranslation(0, 0, 0);
+
+        rootNode.attachChild(player);
+        targetPosition = player.getLocalTranslation();
+
+    }
+
+    private void setupModelOrientation(Spatial model) {
+        // 1. Поворот вокруг оси X (если модель "лежит")
+        model.rotate(FastMath.DEG_TO_RAD * 90, 0, 0);
+
+        // 2. Поворот вокруг оси Y (если модель смотрит в другую сторону)
+        // model.rotate(0, FastMath.DEG_TO_RAD * 180, 0);
+
+        // 3. Комбинированный поворот
+        // model.rotate(FastMath.DEG_TO_RAD * -90, FastMath.DEG_TO_RAD * 180, 0);
+
+        // Наиболее частый случай - модель лежит на боку:
+//        model.rotate(FastMath.DEG_TO_RAD * -90, 0, 0);
+
+        // Можно также использовать кватернионы для точного поворота:
+        // Quaternion rot = new Quaternion();
+        // rot.fromAngles(FastMath.DEG_TO_RAD * -90, 0, 0);
+        // model.setLocalRotation(rot);
+    }
+
+    // Обновляем обработку кликов для начала боя при клике на врага
+    private void handleMouseClick() {
+        Vector2f click2d = inputManager.getCursorPosition();
+        Vector3f click3d = cam.getWorldCoordinates(new Vector2f(click2d.x, click2d.y), 0f);
+        Vector3f dir = cam.getWorldCoordinates(new Vector2f(click2d.x, click2d.y), 1f);
+        dir.subtractLocal(click3d).normalizeLocal();
+
+        Ray ray = new Ray(click3d, dir);
+        CollisionResults results = new CollisionResults();
+        rootNode.collideWith(ray, results);
+
+        if (results.size() > 0) {
+            CollisionResult closest = results.getClosestCollision();
+            Geometry clickedGeo = closest.getGeometry();
+            Vector3f contactPoint = closest.getContactPoint();
+
+            // ПРОВЕРЯЕМ КЛИК НА ВРАГА ДЛЯ НАЧАЛА БОЯ
+            Enemy clickedEnemy = npcManager.getEnemyAtGeometry(clickedGeo);
+            if (clickedEnemy != null && !inCombat) {
+                // Начинаем бой при клике на врага
+                startCombatWithEnemy(clickedEnemy);
+                return;
+            }
+
+            if (inCombat && currentTurnCharacter instanceof PlayerCombatCharacter) {
+                handleCombatClick(clickedGeo, contactPoint);
+            } else {
+                handleMovementClick();
+            }
+        }
+    }
+
+    private void startCombatWithEnemy(Enemy clickedEnemy) {
+        System.out.println("Начинаем бой с " + clickedEnemy.getName());
+        startCombat();
+    }
+
+    private void handleCombatClick(Geometry clickedGeo, Vector3f contactPoint) {
+        // Проверяем, кликнули ли на врага
+        Enemy clickedEnemy = npcManager.getEnemyAtGeometry(clickedGeo);
+        if (clickedEnemy != null && battleSystem.canAttack(currentTurnCharacter, clickedEnemy)) {
+            // Атакуем врага
+            battleSystem.attack(currentTurnCharacter, clickedEnemy);
+            return;
+        }
+
+        // Проверяем, кликнули ли на доступную клетку для движения
+        Vector3f gridPos = gridSystem.worldToGridPosition(contactPoint);
+        if (gridSystem.isPositionInMovementRange(gridPos, currentTurnCharacter.getPosition(),
+                currentTurnCharacter.getMovementRange())) {
+            // Двигаем персонажа в ближайшую клетку
+            gridPos.setX(gridPos.x - 1);
+            gridPos.setZ(gridPos.z - 1);
+            battleSystem.moveCharacter(currentTurnCharacter, gridPos);
+            gridSystem.hideMovementRange();
+        }
+    }
+
+    // Метод для получения игрока как CombatCharacter
+    public PlayerCombatCharacter getPlayerCombatCharacter() {
+        for (CombatCharacter character : combatCharacters) {
+            if (character instanceof PlayerCombatCharacter) {
+                return (PlayerCombatCharacter) character;
+            }
+        }
+        return null;
     }
 
     private void setupLighting() {
@@ -192,44 +422,6 @@ public class Jspectergame extends SimpleApplication {
         createGrid();
     }
 
-    // Обновляем метод создания игрока
-    private void createPlayer() {
-        player = new Node("Player");
-
-        // Тело игрока с освещаемым материалом
-        Box body = new Box(0.4f, 0.8f, 0.4f);
-        Geometry bodyGeo = new Geometry("Body", body);
-        Material bodyMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
-        bodyMat.setBoolean("UseMaterialColors", true);
-        bodyMat.setColor("Ambient", ColorRGBA.Blue);
-        bodyMat.setColor("Diffuse", ColorRGBA.Blue);
-        bodyMat.setColor("Specular", ColorRGBA.White);
-        bodyMat.setFloat("Shininess", 16f);
-        bodyGeo.setMaterial(bodyMat);
-        bodyGeo.setLocalTranslation(0, 0.8f, 0);
-        bodyGeo.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
-
-        // Голова игрока
-        Sphere head = new Sphere(16, 16, 0.3f);
-        Geometry headGeo = new Geometry("Head", head);
-        Material headMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
-        headMat.setBoolean("UseMaterialColors", true);
-        headMat.setColor("Ambient", ColorRGBA.Yellow);
-        headMat.setColor("Diffuse", ColorRGBA.Yellow);
-        headMat.setColor("Specular", ColorRGBA.White);
-        headMat.setFloat("Shininess", 32f);
-        headGeo.setMaterial(headMat);
-        headGeo.setLocalTranslation(0, 1.8f, 0);
-        headGeo.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
-
-        player.attachChild(bodyGeo);
-        player.attachChild(headGeo);
-        player.setLocalTranslation(0, 0, 0);
-        rootNode.attachChild(player);
-
-        targetPosition = player.getLocalTranslation();
-    }
-
     // Обновляем метод создания деревьев
     private void createTree(float x, float y, float z) {
         Node tree = new Node("Tree");
@@ -282,25 +474,6 @@ public class Jspectergame extends SimpleApplication {
         rootNode.attachChild(buildingGeo);
     }
 
-    // Обновляем метод update для движения света с игроком
-    @Override
-    public void simpleUpdate(float tpf) {
-        if (!dialogueUI.isVisible()) {
-            movePlayerToTarget(tpf);
-        }
-
-        cameraController.setTarget(player.getLocalTranslation());
-        cameraController.updateCamera();
-
-        // Обновляем позицию источника света (факела) с игроком
-        if (torchLight != null) {
-            Vector3f playerPos = player.getLocalTranslation();
-            torchLight.setPosition(new Vector3f(playerPos.x, playerPos.y + 2f, playerPos.z));
-        }
-
-        // Обновляем индикаторы взаимодействия
-        npcManager.updateInteractionIndicators(player.getLocalTranslation());
-    }
 
     // Добавляем управление освещением
     private void setupLightingControls() {
@@ -458,25 +631,6 @@ public class Jspectergame extends SimpleApplication {
         }
     }
 
-    private void handleMouseClick() {
-        Vector2f click2d = inputManager.getCursorPosition();
-        Vector3f click3d = cam.getWorldCoordinates(new Vector2f(click2d.x, click2d.y), 0f);
-        Vector3f dir = cam.getWorldCoordinates(new Vector2f(click2d.x, click2d.y), 1f);
-        dir.subtractLocal(click3d).normalizeLocal();
-
-        Ray ray = new Ray(click3d, dir);
-        CollisionResults results = new CollisionResults();
-        rootNode.collideWith(ray, results);
-
-        if (results.size() > 0) {
-            CollisionResult closest = results.getClosestCollision();
-            Vector3f contactPoint = closest.getContactPoint();
-
-            targetPosition = new Vector3f(contactPoint.x, 0, contactPoint.z);
-            targetMarker.setLocalTranslation(targetPosition.add(0, 0.1f, 0));
-        }
-    }
-
     private void handleInteraction() {
         // Проверяем NPC в радиусе взаимодействия
         NPC nearestNPC = npcManager.findNearestNPC(player.getLocalTranslation(), 3.0f);
@@ -515,5 +669,140 @@ public class Jspectergame extends SimpleApplication {
                 player.move(movement);
             }
         }
+    }
+
+    private void createEnemies() {
+        // Создаем несколько врагов
+        createEnemy("Гоблин", new Vector3f(8, 0, 8), 30, 12, 15);
+        createEnemy("Орк", new Vector3f(-6, 0, 10), 45, 16, 12);
+        createEnemy("Скелет", new Vector3f(12, 0, -4), 25, 14, 18);
+    }
+
+    private void createEnemy(String name, Vector3f position, int health, int attack, int armor) {
+        Enemy enemy = new Enemy(name, position, assetManager);
+        enemy.setStats(health, attack, armor);
+        combatCharacters.add(enemy);
+
+        // Добавляем врага в менеджер NPC для отображения
+        npcManager.addEnemy(enemy);
+    }
+
+    private void setupCombatControls() {
+        inputManager.addMapping("StartCombat", new com.jme3.input.controls.KeyTrigger(
+                com.jme3.input.KeyInput.KEY_C));
+        inputManager.addMapping("EndTurn", new com.jme3.input.controls.KeyTrigger(
+                KeyInput.KEY_SPACE));
+        inputManager.addMapping("ShowGrid", new com.jme3.input.controls.KeyTrigger(
+                com.jme3.input.KeyInput.KEY_G));
+
+        inputManager.addListener((ActionListener) (name, isPressed, tpf) -> {
+            if (isPressed) {
+                switch (name) {
+                    case "StartCombat":
+                        if (!inCombat) {
+                            startCombat();
+                        }
+                        break;
+                    case "EndTurn":
+                        if (inCombat) {
+                            endCurrentTurn();
+                        }
+                        break;
+                    case "ShowGrid":
+                        gridSystem.toggleGrid();
+                        break;
+                }
+            }
+        }, "StartCombat", "EndTurn", "ShowGrid");
+    }
+
+    public void startCombat() {
+        inCombat = true;
+        // Создаем боевую группу
+        List<CombatCharacter> playerTeam = new ArrayList<>();
+        List<CombatCharacter> enemyTeam = new ArrayList<>();
+        // Добавляем игрока в команду
+        PlayerCombatCharacter playerCombat = new PlayerCombatCharacter(player, "Игрок", HEALTH, ATTACK, ARMOR);
+        playerTeam.add(playerCombat);
+        combatCharacters.add(playerCombat);
+        // Добавляем врагов в команду
+        for (CombatCharacter character : combatCharacters) {
+            if (character instanceof Enemy) {
+                enemyTeam.add(character);
+            }
+        }
+        // Убедимся что есть враги для боя
+        if (enemyTeam.isEmpty()) {
+            System.out.println("Нет врагов для боя!");
+            inCombat = false;
+            return;
+        }
+        battleSystem.startBattle(playerTeam, enemyTeam);
+        battleSystem.showBattleUI();
+        // Начинаем первый ход
+        startNextTurn();
+    }
+
+    private void enablePlayerTurn() {
+        // Активируем управление для игрока
+        gridSystem.highlightMovementRange(currentTurnCharacter.getPosition(),
+                currentTurnCharacter.getMovementRange());
+    }
+
+    private void endCombat() {
+        inCombat = false;
+        battleSystem.hideBattleUI();
+        gridSystem.hideAllHighlights();
+
+        // Очищаем мертвых персонажей
+        combatCharacters.removeIf(character -> character.getCurrentHealth() <= 0);
+
+        // Удаляем мертвых врагов из сцены
+        for (CombatCharacter character : new ArrayList<>(combatCharacters)) {
+            if (character.getCurrentHealth() <= 0 && character instanceof Enemy) {
+                npcManager.removeEnemy((Enemy) character);
+                combatCharacters.remove(character);
+            }
+        }
+    }
+
+    private void handleMovementClick() {
+        Vector2f click2d = inputManager.getCursorPosition();
+        Vector3f click3d = cam.getWorldCoordinates(new Vector2f(click2d.x, click2d.y), 0f);
+        Vector3f dir = cam.getWorldCoordinates(new Vector2f(click2d.x, click2d.y), 1f);
+        dir.subtractLocal(click3d).normalizeLocal();
+
+        Ray ray = new Ray(click3d, dir);
+        CollisionResults results = new CollisionResults();
+        rootNode.collideWith(ray, results);
+
+        if (results.size() > 0) {
+            CollisionResult closest = results.getClosestCollision();
+            Vector3f contactPoint = closest.getContactPoint();
+
+            targetPosition = new Vector3f(contactPoint.x, 0, contactPoint.z);
+            targetMarker.setLocalTranslation(targetPosition.add(0, 0.1f, 0));
+        }
+    }
+
+    @Override
+    public void simpleUpdate(float tpf) {
+        // Обновляем боевую систему каждый кадр
+        if (inCombat) {
+            battleSystem.update(tpf);
+        } else if (!dialogueUI.isVisible()) {
+            movePlayerToTarget(tpf);
+        }
+
+        cameraController.setTarget(player.getLocalTranslation());
+        cameraController.updateCamera();
+
+        npcManager.updateInteractionIndicators(player.getLocalTranslation());
+    }
+
+    private void executeEnemyTurn(Enemy enemy) {
+        System.out.println("Выполнение хода врага: " + enemy.getName());
+        // Выполняем ход немедленно в основном потоке
+        enemy.executeAITurn(battleSystem);
     }
 }
