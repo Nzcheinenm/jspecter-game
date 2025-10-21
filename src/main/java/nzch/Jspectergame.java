@@ -84,6 +84,11 @@ public class Jspectergame extends SimpleApplication {
         combatCharacters = new ArrayList<>();
         gameTimer = new java.util.Timer();
 
+        // Настройка управления
+        setupMouseInput();
+        setupKeyboardInput();
+        setupMouseWheel(); // Добавляем обработку колеса мыши
+
         setupIsometricCamera();
         setupBasicLighting();
         setupLighting();
@@ -175,6 +180,27 @@ public class Jspectergame extends SimpleApplication {
             battleSystem.endTurn(currentTurnCharacter);
             startNextTurn();
         }
+    }
+
+    // Добавляем метод для настройки колеса мыши
+    private void setupMouseWheel() {
+        inputManager.addMapping("ZoomIn",
+                new com.jme3.input.controls.MouseAxisTrigger(com.jme3.input.MouseInput.AXIS_WHEEL, false));
+        inputManager.addMapping("ZoomOut",
+                new com.jme3.input.controls.MouseAxisTrigger(com.jme3.input.MouseInput.AXIS_WHEEL, true));
+
+        inputManager.addListener((ActionListener) (name, isPressed, tpf) -> {
+            if (isPressed) {
+                switch (name) {
+                    case "ZoomIn":
+                        cameraController.zoom(1); // Приближение
+                        break;
+                    case "ZoomOut":
+                        cameraController.zoom(-1); // Отдаление
+                        break;
+                }
+            }
+        }, "ZoomIn", "ZoomOut");
     }
 
     private void setupBasicLighting() {

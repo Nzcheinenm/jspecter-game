@@ -5,18 +5,23 @@ import com.jme3.renderer.Camera;
 
 public class IsometricCameraController {
 
-    private final Camera camera;
+    private Camera camera;
     private Vector3f target;
     private float distance;
     private float height;
-    private float angle; // угол обзора в радианах
+    private float angle;
+
+    // Параметры зума
+    private float minDistance = 10f;
+    private float maxDistance = 40f;
+    private float zoomSpeed = 2f;
 
     public IsometricCameraController(Camera camera) {
         this.camera = camera;
         this.target = Vector3f.ZERO;
         this.distance = 25f;
         this.height = 20f;
-        this.angle = (float) Math.toRadians(45); // 45 градусов
+        this.angle = (float) Math.toRadians(45);
         updateCamera();
     }
 
@@ -29,9 +34,12 @@ public class IsometricCameraController {
         float offsetX = (float) (distance * Math.cos(angle));
         float offsetZ = (float) (distance * Math.sin(angle));
 
+        // Высота камеры пропорциональна расстоянию
+        float currentHeight = height * (distance / maxDistance);
+
         Vector3f cameraPos = new Vector3f(
                 target.x + offsetX,
-                target.y + height,
+                target.y + currentHeight,
                 target.z + offsetZ
         );
 
@@ -39,19 +47,47 @@ public class IsometricCameraController {
         camera.lookAt(target, Vector3f.UNIT_Y);
     }
 
-    // Методы для настройки камеры
+    // Методы для зума
+    public void zoom(float amount) {
+        distance -= amount * zoomSpeed;
+
+        // Ограничиваем расстояние зума
+        if (distance < minDistance) {
+            distance = minDistance;
+        }
+        if (distance > maxDistance) {
+            distance = maxDistance;
+        }
+
+        updateCamera();
+    }
+
     public void setDistance(float distance) {
-        this.distance = distance;
+        this.distance = Math.max(minDistance, Math.min(maxDistance, distance));
         updateCamera();
     }
 
-    public void setHeight(float height) {
-        this.height = height;
+    public void setZoomSpeed(float zoomSpeed) {
+        this.zoomSpeed = zoomSpeed;
+    }
+
+    public void setZoomLimits(float min, float max) {
+        this.minDistance = min;
+        this.maxDistance = max;
+        // Корректируем текущее расстояние
+        this.distance = Math.max(min, Math.min(max, distance));
         updateCamera();
     }
 
-    public void setAngle(float angleDegrees) {
-        this.angle = (float) Math.toRadians(angleDegrees);
-        updateCamera();
+    public float getDistance() {
+        return distance;
+    }
+
+    public float getMinDistance() {
+        return minDistance;
+    }
+
+    public float getMaxDistance() {
+        return maxDistance;
     }
 }
