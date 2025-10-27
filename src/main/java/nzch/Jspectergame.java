@@ -29,10 +29,10 @@ import nzch.character.Enemy;
 import nzch.character.NPC;
 import nzch.character.PlayerCombatCharacter;
 import nzch.manager.NPCManager;
+import nzch.manager.NiftyUIManager;
 import nzch.system.BattleSystem;
 import nzch.system.DialogueSystem;
 import nzch.system.GridSystem;
-import nzch.ui.DialogueUI;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +50,7 @@ public class Jspectergame extends SimpleApplication {
     private IsometricCameraController cameraController;
     private Geometry targetMarker;
     private NPCManager npcManager;
-    private DialogueUI dialogueUI;
+    private NiftyUIManager niftyUIManager;
     private NPC currentInteractingNPC;
     private DirectionalLightShadowRenderer shadowRenderer;
     private Timer gameTimer;
@@ -66,16 +66,15 @@ public class Jspectergame extends SimpleApplication {
 
     public static void main(String[] args) {
         Jspectergame app = new Jspectergame();
-        // Настройки приложения
         AppSettings settings = new AppSettings(true);
-        settings.setTitle("Изометрическая RPG"); // заголовок окна
-        settings.setResolution(1280, 720);// разрешение окна
-        settings.setFullscreen(false);           // оконный режим
-        settings.setVSync(true);                 // вертикальная синхронизация
-        settings.setSamples(4);                  // сглаживание (антиалиасинг)
+        settings.setTitle("Изометрическая RPG");
+        settings.setResolution(1280, 720);
+        settings.setFullscreen(false);
+        settings.setVSync(true);
+        settings.setSamples(4);
 
         app.setSettings(settings);
-        app.setShowSettings(false); // не показывать диалог настроек при запуске
+        app.setShowSettings(false);
         app.start();
     }
 
@@ -84,10 +83,13 @@ public class Jspectergame extends SimpleApplication {
         combatCharacters = new ArrayList<>();
         gameTimer = new java.util.Timer();
 
+        // Инициализация Nifty GUI ПЕРВОЙ
+        niftyUIManager = new NiftyUIManager(this);
+
         // Настройка управления
         setupMouseInput();
         setupKeyboardInput();
-        setupMouseWheel(); // Добавляем обработку колеса мыши
+        setupMouseWheel();
 
         setupIsometricCamera();
         setupBasicLighting();
@@ -99,23 +101,23 @@ public class Jspectergame extends SimpleApplication {
 
         // Инициализация систем
         dialogueSystem = new DialogueSystem();
-        dialogueUI = new DialogueUI(guiNode, guiFont, this);
         npcManager = new NPCManager(rootNode, assetManager, this);
 
         // Инициализация боевой системы
-        gridSystem = new GridSystem(rootNode, assetManager, 40, 40); // Увеличиваем сетку
+        gridSystem = new GridSystem(rootNode, assetManager, 40, 40);
         battleSystem = new BattleSystem(this, gridSystem);
 
         // Создание NPC и врагов
         npcManager.createNPCs();
         createEnemies();
 
-        setupMouseInput();
-        setupKeyboardInput();
         setupCombatControls();
 
         // Включаем сетку по умолчанию для отладки
         gridSystem.toggleGrid();
+
+        // ТЕСТОВАЯ КНОПКА - удалить после тестирования
+        setupTestInput();
     }
 
     public BitmapFont getGuiFont() {
@@ -155,15 +157,19 @@ public class Jspectergame extends SimpleApplication {
         System.out.println("Текущий ход: " + currentTurnCharacter.getName() +
                 " (HP: " + currentTurnCharacter.getCurrentHealth() + ")");
 
-        // Проверяем, не мертв ли персонаж
         if (!currentTurnCharacter.isAlive()) {
             System.out.println("Персонаж мертв, ищу следующего...");
             battleSystem.endTurn(currentTurnCharacter);
-            startNextTurn(); // Рекурсивно ищем следующего
+            startNextTurn();
             return;
         }
 
         battleSystem.showAvailableActions(currentTurnCharacter);
+
+        // Обновляем UI с информацией о ходе
+//        niftyUIManager.updateCombatInfo("Бой продолжается",
+//                "Ход: " + currentTurnCharacter.getName(),
+//                currentTurnCharacter instanceof PlayerCombatCharacter ? "Ваш ход - выберите действие" : "Ход противника");
 
         if (currentTurnCharacter instanceof PlayerCombatCharacter) {
             System.out.println(">>> ОЖИДАНИЕ ДЕЙСТВИЙ ИГРОКА <<<");
@@ -174,6 +180,19 @@ public class Jspectergame extends SimpleApplication {
         }
     }
 
+    private void setupTestInput() {
+        inputManager.addMapping("TestDialogue", new KeyTrigger(KeyInput.KEY_T));
+        inputManager.addListener((ActionListener) (name, isPressed, tpf) -> {
+            if (name.equals("TestDialogue") && isPressed) {
+                System.out.println("=== ТЕСТОВЫЙ ДИАЛОГ ===");
+                // Создаем тестовый NPC для диалога
+                NPC testNPC = new NPC("Тестовый NPC", "guard_dialogue",
+                        new Vector3f(0, 0, 0), assetManager);
+                startDialogue(testNPC);
+            }
+        }, "TestDialogue");
+    }
+
     public void endCurrentTurn() {
         System.out.println("--- ЗАВЕРШЕНИЕ ТЕКУЩЕГО ХОДА ---");
         if (currentTurnCharacter != null) {
@@ -182,7 +201,6 @@ public class Jspectergame extends SimpleApplication {
         }
     }
 
-    // Добавляем метод для настройки колеса мыши
     private void setupMouseWheel() {
         inputManager.addMapping("ZoomIn",
                 new com.jme3.input.controls.MouseAxisTrigger(com.jme3.input.MouseInput.AXIS_WHEEL, false));
@@ -193,10 +211,10 @@ public class Jspectergame extends SimpleApplication {
             if (isPressed) {
                 switch (name) {
                     case "ZoomIn":
-                        cameraController.zoom(1); // Приближение
+                        cameraController.zoom(1);
                         break;
                     case "ZoomOut":
-                        cameraController.zoom(-1); // Отдаление
+                        cameraController.zoom(-1);
                         break;
                 }
             }
@@ -204,9 +222,8 @@ public class Jspectergame extends SimpleApplication {
     }
 
     private void setupBasicLighting() {
-        // Яркое освещение чтобы избежать черного экрана
         AmbientLight ambientLight = new AmbientLight();
-        ambientLight.setColor(new ColorRGBA(0.8f, 0.8f, 0.8f, 1.0f)); // Увеличиваем яркость
+        ambientLight.setColor(new ColorRGBA(0.8f, 0.8f, 0.8f, 1.0f));
         rootNode.addLight(ambientLight);
 
         DirectionalLight sunLight = new DirectionalLight();
@@ -214,7 +231,6 @@ public class Jspectergame extends SimpleApplication {
         sunLight.setDirection(new Vector3f(-0.5f, -1f, -0.5f).normalizeLocal());
         rootNode.addLight(sunLight);
 
-        // Убираем точечный свет если он вызывает проблемы
         torchLight = new PointLight();
         torchLight.setColor(new ColorRGBA(1.0f, 0.9f, 0.7f, 1.0f));
         torchLight.setRadius(10f);
@@ -222,55 +238,31 @@ public class Jspectergame extends SimpleApplication {
     }
 
     private void createPlayer() {
-        // Загружаем модель игрока
         Spatial playerModel = assetManager.loadModel("Models/character.obj");
 
-        // Создаем материал для модели (если нужно)
         Material playerMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         playerMat.setBoolean("UseMaterialColors", true);
         playerMat.setColor("Ambient", ColorRGBA.White);
         playerMat.setColor("Diffuse", ColorRGBA.Black);
         playerModel.setMaterial(playerMat);
 
-        // Настраиваем масштаб модели (если она слишком большая/маленькая)
-        playerModel.setLocalScale(3f); // Подберите подходящий масштаб
+        playerModel.setLocalScale(3f);
+        playerModel.setLocalTranslation(0, 1.0f, 0);
 
-        // Затем поднимаем по оси Y
-        playerModel.setLocalTranslation(0, 1.0f, 0); // Поднимаем на 1 единицу вверх
-
-        // Разворачиваем модель если она лежит или повернута неправильно
         setupModelOrientation(playerModel);
 
-        // Создаем корневой узел для игрока
         player = new Node("Player");
         player.attachChild(playerModel);
         player.setLocalTranslation(0, 0, 0);
 
         rootNode.attachChild(player);
         targetPosition = player.getLocalTranslation();
-
     }
 
     private void setupModelOrientation(Spatial model) {
-        // 1. Поворот вокруг оси X (если модель "лежит")
         model.rotate(FastMath.DEG_TO_RAD * 90, 0, 0);
-
-        // 2. Поворот вокруг оси Y (если модель смотрит в другую сторону)
-        // model.rotate(0, FastMath.DEG_TO_RAD * 180, 0);
-
-        // 3. Комбинированный поворот
-        // model.rotate(FastMath.DEG_TO_RAD * -90, FastMath.DEG_TO_RAD * 180, 0);
-
-        // Наиболее частый случай - модель лежит на боку:
-//        model.rotate(FastMath.DEG_TO_RAD * -90, 0, 0);
-
-        // Можно также использовать кватернионы для точного поворота:
-        // Quaternion rot = new Quaternion();
-        // rot.fromAngles(FastMath.DEG_TO_RAD * -90, 0, 0);
-        // model.setLocalRotation(rot);
     }
 
-    // Обновляем обработку кликов для начала боя при клике на врага
     private void handleMouseClick() {
         Vector2f click2d = inputManager.getCursorPosition();
         Vector3f click3d = cam.getWorldCoordinates(new Vector2f(click2d.x, click2d.y), 0f);
@@ -289,14 +281,13 @@ public class Jspectergame extends SimpleApplication {
             // ПРОВЕРЯЕМ КЛИК НА ВРАГА ДЛЯ НАЧАЛА БОЯ
             Enemy clickedEnemy = npcManager.getEnemyAtGeometry(clickedGeo);
             if (clickedEnemy != null && !inCombat) {
-                // Начинаем бой при клике на врага
                 startCombatWithEnemy(clickedEnemy);
                 return;
             }
 
             if (inCombat && currentTurnCharacter instanceof PlayerCombatCharacter) {
                 handleCombatClick(clickedGeo, contactPoint);
-            } else {
+            } else if (!niftyUIManager.isDialogueVisible()) {
                 handleMovementClick();
             }
         }
@@ -308,19 +299,15 @@ public class Jspectergame extends SimpleApplication {
     }
 
     private void handleCombatClick(Geometry clickedGeo, Vector3f contactPoint) {
-        // Проверяем, кликнули ли на врага
         Enemy clickedEnemy = npcManager.getEnemyAtGeometry(clickedGeo);
         if (clickedEnemy != null && battleSystem.canAttack(currentTurnCharacter, clickedEnemy)) {
-            // Атакуем врага
             battleSystem.attack(currentTurnCharacter, clickedEnemy);
             return;
         }
 
-        // Проверяем, кликнули ли на доступную клетку для движения
         Vector3f gridPos = gridSystem.worldToGridPosition(contactPoint);
         if (gridSystem.isPositionInMovementRange(gridPos, currentTurnCharacter.getPosition(),
                 currentTurnCharacter.getMovementRange())) {
-            // Двигаем персонажа в ближайшую клетку
             gridPos.setX(gridPos.x - 1);
             gridPos.setZ(gridPos.z - 1);
             battleSystem.moveCharacter(currentTurnCharacter, gridPos);
@@ -328,7 +315,6 @@ public class Jspectergame extends SimpleApplication {
         }
     }
 
-    // Метод для получения игрока как CombatCharacter
     public PlayerCombatCharacter getPlayerCombatCharacter() {
         for (CombatCharacter character : combatCharacters) {
             if (character instanceof PlayerCombatCharacter) {
@@ -339,61 +325,37 @@ public class Jspectergame extends SimpleApplication {
     }
 
     private void setupLighting() {
-        // 1. Ambient Light (рассеянное освещение)
         ambientLight = new AmbientLight();
         ambientLight.setColor(new ColorRGBA(0.3f, 0.3f, 0.3f, 1.0f));
         rootNode.addLight(ambientLight);
 
-        // 2. Directional Light (солнечный свет)
         sunLight = new DirectionalLight();
         sunLight.setColor(new ColorRGBA(0.8f, 0.8f, 0.8f, 1.0f));
         sunLight.setDirection(new Vector3f(-0.5f, -1f, -0.5f).normalizeLocal());
         rootNode.addLight(sunLight);
 
-        // 3. Point Light (источник света у игрока - как факел)
         torchLight = new PointLight();
         torchLight.setColor(new ColorRGBA(1.0f, 0.9f, 0.7f, 1.0f));
         torchLight.setRadius(10f);
         rootNode.addLight(torchLight);
 
-        // Настраиваем тени (опционально)
         setupAdvancedLighting();
     }
 
     private void setupAdvancedLighting() {
-        // Базовая настройка света (как ранее)
-        ambientLight = new AmbientLight();
-        ambientLight.setColor(new ColorRGBA(0.3f, 0.3f, 0.3f, 1.0f));
-        rootNode.addLight(ambientLight);
-
-        sunLight = new DirectionalLight();
-        sunLight.setColor(new ColorRGBA(0.8f, 0.8f, 0.8f, 1.0f));
-        sunLight.setDirection(new Vector3f(-0.5f, -1f, -0.5f).normalizeLocal());
-        rootNode.addLight(sunLight);
-
-        // Настройка рендерера теней
         shadowRenderer = new DirectionalLightShadowRenderer(assetManager, 1024, 3);
         shadowRenderer.setLight(sunLight);
         shadowRenderer.setShadowIntensity(0.5f);
         viewPort.addProcessor(shadowRenderer);
-
-        // Для объектов, которые должны отбрасывать тени:
-        // geometry.setShadowMode(ShadowMode.Cast);
-        // Для объектов, которые должны принимать тени:
-        // geometry.setShadowMode(ShadowMode.Receive);
     }
 
     private void createSpecialLights() {
-        // Добавляем огонь у костра
         createCampfire(-10, 0, 8);
-
-        // Добавляем свет в зданиях
         createBuildingLight(-15, 2, -12);
         createBuildingLight(20, 2, 18);
     }
 
     private void createCampfire(float x, float y, float z) {
-        // Создаем костер
         Sphere fire = new Sphere(16, 16, 0.5f);
         Geometry fireGeo = new Geometry("Campfire", fire);
         Material fireMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
@@ -407,7 +369,6 @@ public class Jspectergame extends SimpleApplication {
         fireGeo.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
         rootNode.attachChild(fireGeo);
 
-        // Добавляем свет от костра
         PointLight fireLight = new PointLight();
         fireLight.setColor(new ColorRGBA(1.0f, 0.5f, 0.2f, 1.0f));
         fireLight.setRadius(8f);
@@ -416,7 +377,6 @@ public class Jspectergame extends SimpleApplication {
     }
 
     private void createBuildingLight(float x, float y, float z) {
-        // Свет внутри здания
         PointLight buildingLight = new PointLight();
         buildingLight.setColor(new ColorRGBA(1.0f, 0.9f, 0.7f, 1.0f));
         buildingLight.setRadius(6f);
@@ -424,13 +384,10 @@ public class Jspectergame extends SimpleApplication {
         rootNode.addLight(buildingLight);
     }
 
-    // Обновляем метод создания земли с использованием освещаемых материалов
     private void createGround() {
-        // Создаем землю с освещаемым материалом
         Box ground = new Box(50, 0.1f, 50);
         Geometry groundGeo = new Geometry("Ground", ground);
 
-        // Используем Lighting material вместо Unshaded
         Material groundMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         groundMat.setBoolean("UseMaterialColors", true);
         groundMat.setColor("Ambient", new ColorRGBA(0.2f, 0.6f, 0.2f, 1.0f));
@@ -440,19 +397,15 @@ public class Jspectergame extends SimpleApplication {
 
         groundGeo.setMaterial(groundMat);
         groundGeo.setLocalTranslation(0, -1, 0);
-
-        // Устанавливаем отбрасывание теней
         groundGeo.setShadowMode(RenderQueue.ShadowMode.Receive);
         rootNode.attachChild(groundGeo);
 
         createGrid();
     }
 
-    // Обновляем метод создания деревьев
     private void createTree(float x, float y, float z) {
         Node tree = new Node("Tree");
 
-        // Ствол дерева
         Box trunk = new Box(0.3f, 1.5f, 0.3f);
         Geometry trunkGeo = new Geometry("Trunk", trunk);
         Material trunkMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
@@ -465,7 +418,6 @@ public class Jspectergame extends SimpleApplication {
         trunkGeo.setLocalTranslation(0, 1.5f, 0);
         trunkGeo.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
 
-        // Крона дерева
         Sphere leaves = new Sphere(16, 16, 1.8f);
         Geometry leavesGeo = new Geometry("Leaves", leaves);
         Material leavesMat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
@@ -484,7 +436,6 @@ public class Jspectergame extends SimpleApplication {
         rootNode.attachChild(tree);
     }
 
-    // Обновляем метод создания зданий
     private void createBuilding(float x, float y, float z) {
         Box building = new Box(3f, 4f, 3f);
         Geometry buildingGeo = new Geometry("Building", building);
@@ -500,8 +451,6 @@ public class Jspectergame extends SimpleApplication {
         rootNode.attachChild(buildingGeo);
     }
 
-
-    // Добавляем управление освещением
     private void setupLightingControls() {
         inputManager.addMapping("ToggleLighting", new KeyTrigger(KeyInput.KEY_L));
         inputManager.addMapping("CycleTime", new KeyTrigger(KeyInput.KEY_T));
@@ -535,8 +484,7 @@ public class Jspectergame extends SimpleApplication {
     }
 
     private void cycleTimeOfDay() {
-        // Меняем время суток - вращаем направленный свет
-        float currentTime = (float) Math.random(); // Простая реализация
+        float currentTime = (float) Math.random();
         float sunAngle = currentTime * FastMath.TWO_PI;
 
         sunLight.setDirection(new Vector3f(
@@ -545,17 +493,13 @@ public class Jspectergame extends SimpleApplication {
                 FastMath.sin(sunAngle) * 2f
         ).normalizeLocal());
 
-        // Меняем цвет в зависимости от времени
         if (currentTime < 0.25f || currentTime > 0.75f) {
-            // Ночь
             sunLight.setColor(new ColorRGBA(0.2f, 0.2f, 0.5f, 1.0f));
             ambientLight.setColor(new ColorRGBA(0.1f, 0.1f, 0.2f, 1.0f));
         } else if (currentTime < 0.3f || currentTime > 0.7f) {
-            // Утро/Вечер
             sunLight.setColor(new ColorRGBA(1.0f, 0.6f, 0.3f, 1.0f));
             ambientLight.setColor(new ColorRGBA(0.4f, 0.3f, 0.2f, 1.0f));
         } else {
-            // День
             sunLight.setColor(new ColorRGBA(1.0f, 1.0f, 0.9f, 1.0f));
             ambientLight.setColor(new ColorRGBA(0.4f, 0.4f, 0.4f, 1.0f));
         }
@@ -619,10 +563,10 @@ public class Jspectergame extends SimpleApplication {
         inputManager.addMapping("Interact", new MouseButtonTrigger(MouseInput.BUTTON_RIGHT));
 
         inputManager.addListener((ActionListener) (name, isPressed, tpf) -> {
-            if (name.equals("Click") && isPressed && !dialogueUI.isVisible()) {
+            if (name.equals("Click") && isPressed && !niftyUIManager.isDialogueVisible()) {
                 handleMouseClick();
             }
-            if (name.equals("Interact") && isPressed && !dialogueUI.isVisible()) {
+            if (name.equals("Interact") && isPressed && !niftyUIManager.isDialogueVisible()) {
                 handleInteraction();
             }
         }, "Click", "Interact");
@@ -634,33 +578,31 @@ public class Jspectergame extends SimpleApplication {
 
         inputManager.addListener((ActionListener) (name, isPressed, tpf) -> {
             if (name.equals("Space") && isPressed) {
-                if (dialogueUI.isVisible()) {
-                    dialogueUI.nextDialogue();
+                if (niftyUIManager.isDialogueVisible()) {
+                    niftyUIManager.nextDialogue();
                 } else {
                     handleInteraction();
                 }
             }
         }, "Space");
 
-        // Добавляем выбор вариантов диалога цифрами
-        for (int i = 1; i <= 9; i++) {
+        // Обработка цифровых клавиш для выбора вариантов диалога
+        for (int i = 1; i <= 3; i++) {
             final int optionIndex = i - 1;
             inputManager.addMapping("Option" + i, new com.jme3.input.controls.KeyTrigger(
                     com.jme3.input.KeyInput.KEY_1 + optionIndex));
 
             int finalI = i;
             inputManager.addListener((ActionListener) (name, isPressed, tpf) -> {
-                if (name.equals("Option" + finalI) && isPressed && dialogueUI.isVisible()) {
-                    dialogueUI.selectOption(optionIndex);
+                if (name.equals("Option" + finalI) && isPressed && niftyUIManager.isDialogueVisible()) {
+                    niftyUIManager.selectOption(optionIndex);
                 }
             }, "Option" + i);
         }
     }
 
     private void handleInteraction() {
-        // Проверяем NPC в радиусе взаимодействия
         NPC nearestNPC = npcManager.findNearestNPC(player.getLocalTranslation(), 3.0f);
-
         if (nearestNPC != null) {
             startDialogue(nearestNPC);
         }
@@ -668,13 +610,14 @@ public class Jspectergame extends SimpleApplication {
 
     public void startDialogue(NPC npc) {
         currentInteractingNPC = npc;
-        dialogueUI.showDialogue(npc.getDialogue());
-        targetPosition = player.getLocalTranslation(); // Останавливаем движение
+        niftyUIManager.showDialogue(npc.getName(), npc.getDialogue());
+        targetPosition = player.getLocalTranslation();
     }
+
 
     public void endDialogue() {
         currentInteractingNPC = null;
-        dialogueUI.hide();
+        niftyUIManager.hideDialogue();
     }
 
     private void movePlayerToTarget(float tpf) {
@@ -698,7 +641,6 @@ public class Jspectergame extends SimpleApplication {
     }
 
     private void createEnemies() {
-        // Создаем несколько врагов
         createEnemy("Гоблин", new Vector3f(8, 0, 8), 30, 12, 15);
         createEnemy("Орк", new Vector3f(-6, 0, 10), 45, 16, 12);
         createEnemy("Скелет", new Vector3f(12, 0, -4), 25, 14, 18);
@@ -708,8 +650,6 @@ public class Jspectergame extends SimpleApplication {
         Enemy enemy = new Enemy(name, position, assetManager);
         enemy.setStats(health, attack, armor);
         combatCharacters.add(enemy);
-
-        // Добавляем врага в менеджер NPC для отображения
         npcManager.addEnemy(enemy);
     }
 
@@ -744,46 +684,46 @@ public class Jspectergame extends SimpleApplication {
 
     public void startCombat() {
         inCombat = true;
-        // Создаем боевую группу
         List<CombatCharacter> playerTeam = new ArrayList<>();
         List<CombatCharacter> enemyTeam = new ArrayList<>();
-        // Добавляем игрока в команду
+
         PlayerCombatCharacter playerCombat = new PlayerCombatCharacter(player, "Игрок", HEALTH, ATTACK, ARMOR);
         playerTeam.add(playerCombat);
         combatCharacters.add(playerCombat);
-        // Добавляем врагов в команду
+
         for (CombatCharacter character : combatCharacters) {
             if (character instanceof Enemy) {
                 enemyTeam.add(character);
             }
         }
-        // Убедимся что есть враги для боя
+
         if (enemyTeam.isEmpty()) {
             System.out.println("Нет врагов для боя!");
             inCombat = false;
             return;
         }
+
         battleSystem.startBattle(playerTeam, enemyTeam);
-        battleSystem.showBattleUI();
-        // Начинаем первый ход
+
+        // ПОКАЗЫВАЕМ БОЕВОЙ UI
+//        niftyUIManager.showCombatUI();
+//        niftyUIManager.updateCombatInfo("Бой начался!", "Ход: Игрок", "Выберите действие");
+
         startNextTurn();
     }
 
     private void enablePlayerTurn() {
-        // Активируем управление для игрока
         gridSystem.highlightMovementRange(currentTurnCharacter.getPosition(),
                 currentTurnCharacter.getMovementRange());
     }
 
     private void endCombat() {
         inCombat = false;
-        battleSystem.hideBattleUI();
+//        niftyUIManager.hideCombatUI();
         gridSystem.hideAllHighlights();
 
-        // Очищаем мертвых персонажей
         combatCharacters.removeIf(character -> character.getCurrentHealth() <= 0);
 
-        // Удаляем мертвых врагов из сцены
         for (CombatCharacter character : new ArrayList<>(combatCharacters)) {
             if (character.getCurrentHealth() <= 0 && character instanceof Enemy) {
                 npcManager.removeEnemy((Enemy) character);
@@ -813,10 +753,9 @@ public class Jspectergame extends SimpleApplication {
 
     @Override
     public void simpleUpdate(float tpf) {
-        // Обновляем боевую систему каждый кадр
         if (inCombat) {
             battleSystem.update(tpf);
-        } else if (!dialogueUI.isVisible()) {
+        } else if (!niftyUIManager.isDialogueVisible()) {
             movePlayerToTarget(tpf);
         }
 
@@ -828,7 +767,14 @@ public class Jspectergame extends SimpleApplication {
 
     private void executeEnemyTurn(Enemy enemy) {
         System.out.println("Выполнение хода врага: " + enemy.getName());
-        // Выполняем ход немедленно в основном потоке
         enemy.executeAITurn(battleSystem);
+    }
+
+    @Override
+    public void destroy() {
+        super.destroy();
+        if (niftyUIManager != null) {
+            niftyUIManager.cleanup();
+        }
     }
 }

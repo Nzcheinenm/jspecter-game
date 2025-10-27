@@ -59,6 +59,8 @@ dependencies {
 //    implementation 'com.github.neph1:SsrFilter:Tag'
 //    implementation 'com.rvandoosselaer:blocks:1.7.0'
 
+    implementation("org.jmonkeyengine:jme3-niftygui:3.6.1-stable")
+
 }
 
 distZip {

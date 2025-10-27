@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nifty xmlns="http://nifty-gui.lessvoid.com/nifty-gui"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <screen id="main_screen" controller="nzch.ui.SimpleNiftyDialogueController">
+
+        <layer id="dialogue_layer" childLayout="center">
+
+            <panel id="dialogue_panel" width="70%" height="35%"
+                   backgroundColor="#1a1a2ecc" padding="25px"
+                   childLayout="vertical" align="center" valign="center"
+                   visible="false">
+
+                <text id="npc_name" text="NPC"
+                      font="Interface/Fonts/Default.fnt"
+                      color="#ffff00ff" height="15%"/>
+
+                <panel height="45%" width="100%" childLayout="center" marginBottom="10px">
+                    <text id="dialogue_text" text="Текст диалога..."
+                          font="Interface/Fonts/Default.fnt"
+                          color="#ffffffff" width="95%"
+                          wrap="true"/>
+                </panel>
+
+                <panel id="options_container" height="30%" width="100%"
+                       childLayout="vertical" visible="false">
+
+                    <control id="option_1" name="button" label="Вариант 1"
+                             width="100%" height="25%"
+                             onMouseClick="option1()"/>
+
+                    <control id="option_2" name="button" label="Вариант 2"
+                             width="100%" height="25%"
+                             onMouseClick="option2()"/>
+
+                    <control id="option_3" name="button" label="Вариант 3"
+                             width="100%" height="25%"
+                             onMouseClick="option3()"/>
+
+                </panel>
+
+                <panel height="10%" width="100%" childLayout="center">
+                    <text id="hint_text" text="[ПРОБЕЛ] продолжить"
+                          font="Interface/Fonts/Default.fnt"
+                          color="#00ff00ff"/>
+                </panel>
+
+            </panel>
+        </layer>
+
+        <layer id="combat_layer" childLayout="vertical" visible="false">
+            <panel id="combat_panel" width="300px" height="150px"
+                   backgroundColor="#2d2d2dcc" padding="10px"
+                   align="left" valign="top" childLayout="vertical">
+                <text id="combat_info" text="Бой начался!"
+                      font="Interface/Fonts/Default.fnt"
+                      color="#ffffffff" width="100%"/>
+                <text id="turn_info" text="Ход: Игрок"
+                      font="Interface/Fonts/Default.fnt"
+                      color="#ffff00ff" width="100%"/>
+                <text id="action_hint" text="Выберите действие"
+                      font="Interface/Fonts/Default.fnt"
+                      color="#00ffffff" width="100%"/>
+            </panel>
+        </layer>
+    </screen>
+</nifty>
