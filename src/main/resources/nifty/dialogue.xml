@@ -2,8 +2,23 @@
 <nifty xmlns="http://nifty-gui.lessvoid.com/nifty-gui"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
-    <screen id="main_screen" controller="nzch.ui.SimpleNiftyDialogueController">
+    <useStyles filename="nifty-default-styles.xml" />
 
+    <style id="enemy_healthy" base="default">
+        <attributes backgroundColor="#2d1a2d" />
+    </style>
+
+    <style id="enemy_wounded" base="default">
+        <attributes backgroundColor="#4d2a1a" />
+    </style>
+
+    <style id="enemy_critical" base="default">
+        <attributes backgroundColor="#4d1a1a" />
+    </style>
+
+    <screen id="main_screen" controller="nzch.controller.NiftyDialogueController">
+
+        <!-- Слой для диалогов -->
         <layer id="dialogue_layer" childLayout="center">
 
             <panel id="dialogue_panel" width="70%" height="35%"
@@ -17,7 +32,7 @@
 
                 <panel height="45%" width="100%" childLayout="center" marginBottom="10px">
                     <text id="dialogue_text" text="Текст диалога..."
-                          font="Interface/Fonts/Default.fnt"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
                           color="#ffffffff" width="95%"
                           wrap="true"/>
                 </panel>
@@ -41,27 +56,217 @@
 
                 <panel height="10%" width="100%" childLayout="center">
                     <text id="hint_text" text="[ПРОБЕЛ] продолжить"
-                          font="Interface/Fonts/Default.fnt"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
                           color="#00ff00ff"/>
                 </panel>
 
             </panel>
         </layer>
 
+        <!-- Слой для боевого интерфейса -->
         <layer id="combat_layer" childLayout="vertical" visible="false">
-            <panel id="combat_panel" width="300px" height="150px"
+
+            <!-- Верхняя панель - информация о бое -->
+            <panel id="combat_top_panel" width="100%" height="100px"
                    backgroundColor="#2d2d2dcc" padding="10px"
-                   align="left" valign="top" childLayout="vertical">
-                <text id="combat_info" text="Бой начался!"
-                      font="Interface/Fonts/Default.fnt"
-                      color="#ffffffff" width="100%"/>
-                <text id="turn_info" text="Ход: Игрок"
-                      font="Interface/Fonts/Default.fnt"
-                      color="#ffff00ff" width="100%"/>
-                <text id="action_hint" text="Выберите действие"
-                      font="Interface/Fonts/Default.fnt"
-                      color="#00ffffff" width="100%"/>
+                   align="center" valign="top" childLayout="horizontal">
+
+                <panel width="30%" height="100%" childLayout="vertical">
+                    <text id="combat_info" text="⚔️ БОЙ ⚔️"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                          color="#ff4444ff" width="100%"/>
+                    <text id="turn_info" text="Ход: Игрок"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                          color="#ffff00ff" width="100%"/>
+                </panel>
+
+                <panel width="40%" height="100%" childLayout="center">
+                    <text id="action_hint" text="Выберите действие"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                          color="#00ffffff" width="100%"
+                          textHAlign="center"/>
+                </panel>
+
+                <panel width="30%" height="100%" childLayout="vertical" align="right">
+                    <text id="enemy_count" text="Врагов: 3"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                          color="#ff8888ff" width="100%"
+                          textHAlign="right"/>
+                    <text id="round_info" text="Раунд: 1"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                          color="#8888ffff" width="100%"
+                          textHAlign="right"/>
+                </panel>
+
             </panel>
+
+            <!-- Левая панель - информация о персонажах -->
+            <panel id="combat_left_panel" width="300px" height="400px"
+                   backgroundColor="#2d2d2dcc" padding="10px"
+                   align="left" valign="center" childLayout="vertical">
+
+                <text text="🎯 ВАША КОМАНДА"
+                      font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                      color="#44ff44ff" width="100%"
+                      marginBottom="10px"/>
+
+                <panel id="player_info" width="100%" height="80px"
+                       backgroundColor="#1a2d1acc" padding="5px"
+                       childLayout="vertical" marginBottom="5px">
+                    <text id="player_name" text="Игрок"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                          color="#44ff44ff" width="100%"/>
+                    <text id="player_hp" text="HP: 50/50"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                          color="#ffffffff" width="100%"/>
+                    <text id="player_status" text="✅ Готов"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                          color="#44ff44ff" width="100%"/>
+                </panel>
+
+                <text text="👹 ПРОТИВНИКИ"
+                      font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                      color="#ff4444ff" width="100%"
+                      marginTop="10px" marginBottom="10px"/>
+
+                <panel id="enemy_list" width="100%" height="250px"
+                       childLayout="vertical">
+
+                    <!-- Предопределенные панели для врагов -->
+                    <panel id="enemy_panel_1" width="100%" height="55px"
+                           backgroundColor="#2d1a2d" padding="5px"
+                           childLayout="vertical" visible="false"
+                           marginBottom="5px">
+                        <text id="enemy_name_1" text="Враг 1"
+                              font="Interface/Fonts/Default.fnt"
+                              color="#ff4444ff" width="100%"/>
+                        <text id="enemy_hp_1" text="HP: 30/30"
+                              font="Interface/Fonts/Default.fnt"
+                              color="#ffffffff" width="100%"/>
+                    </panel>
+
+                    <panel id="enemy_panel_2" width="100%" height="55px"
+                           backgroundColor="#2d1a2d" padding="5px"
+                           childLayout="vertical" visible="false"
+                           marginBottom="5px">
+                        <text id="enemy_name_2" text="Враг 2"
+                              font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                              color="#ff4444ff" width="100%"/>
+                        <text id="enemy_hp_2" text="HP: 30/30"
+                              font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                              color="#ffffffff" width="100%"/>
+                    </panel>
+
+                    <panel id="enemy_panel_3" width="100%" height="55px"
+                           backgroundColor="#2d1a2d" padding="5px"
+                           childLayout="vertical" visible="false"
+                           marginBottom="5px">
+                        <text id="enemy_name_3" text="Враг 3"
+                              font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                              color="#ff4444ff" width="100%"/>
+                        <text id="enemy_hp_3" text="HP: 30/30"
+                              font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                              color="#ffffffff" width="100%"/>
+                    </panel>
+
+                    <panel id="enemy_panel_4" width="100%" height="55px"
+                           backgroundColor="#2d1a2d" padding="5px"
+                           childLayout="vertical" visible="false"
+                           marginBottom="5px">
+                        <text id="enemy_name_4" text="Враг 4"
+                              font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                              color="#ff4444ff" width="100%"/>
+                        <text id="enemy_hp_4" text="HP: 30/30"
+                              font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                              color="#ffffffff" width="100%"/>
+                    </panel>
+
+                    <panel id="enemy_panel_5" width="100%" height="55px"
+                           backgroundColor="#2d1a2d" padding="5px"
+                           childLayout="vertical" visible="false">
+                        <text id="enemy_name_5" text="Враг 5"
+                              font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                              color="#ff4444ff" width="100%"/>
+                        <text id="enemy_hp_5" text="HP: 30/30"
+                              font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                              color="#ffffffff" width="100%"/>
+                    </panel>
+
+                </panel>
+
+            </panel>
+
+            <!-- Правая панель - действия -->
+            <panel id="combat_right_panel" width="250px" height="300px"
+                   backgroundColor="#2d2d2dcc" padding="10px"
+                   align="right" valign="center" childLayout="vertical">
+
+                <text text="⚡ ДЕЙСТВИЯ"
+                      font="Interface/Fonts/Default.fnt"
+                      color="#ffff00ff" width="100%"
+                      marginBottom="15px"/>
+
+                <control id="attack_button" name="button" label="🗡️ АТАКА"
+                         width="100%" height="50px"
+                         onMouseClick="attackAction()"
+                         marginBottom="5px"/>
+
+                <control id="move_button" name="button" label="👣 ПЕРЕДВИЖЕНИЕ"
+                         width="100%" height="50px"
+                         onMouseClick="moveAction()"
+                         marginBottom="5px"/>
+
+                <control id="skill_button" name="button" label="🔮 УМЕНИЕ"
+                         width="100%" height="50px"
+                         onMouseClick="skillAction()"
+                         marginBottom="5px"/>
+
+                <control id="item_button" name="button" label="🎒 ПРЕДМЕТ"
+                         width="100%" height="50px"
+                         onMouseClick="itemAction()"
+                         marginBottom="5px"/>
+
+                <control id="end_turn_button" name="button" label="⏹️ ЗАВЕРШИТЬ ХОД"
+                         width="100%" height="50px"
+                         onMouseClick="endTurnAction()"
+                         marginTop="10px"/>
+
+            </panel>
+
+            <!-- Нижняя панель - лог боя -->
+            <panel id="combat_log_panel" width="80%" height="150px"
+                   backgroundColor="#1a1a1acc" padding="10px"
+                   align="center" valign="bottom" childLayout="vertical">
+
+                <text text="📜 ЛОГ БОЯ"
+                      font="Interface/Fonts/Default.fnt"
+                      color="#8888ffff" width="100%"
+                      marginBottom="5px"/>
+
+                <panel id="combat_log" width="100%" height="120px"
+                       backgroundColor="#0a0a0a88" padding="5px"
+                       childLayout="vertical">
+                    <text id="log_line_1" text="Бой начался!"
+                          font="Interface/Fonts/Default.fnt"
+                          color="#ffffffff" width="100%"/>
+                    <text id="log_line_2" text=""
+                          font="Interface/Fonts/Default.fnt"
+                          color="#ffffffff" width="100%"/>
+                    <text id="log_line_3" text=""
+                          font="Interface/Fonts/Default.fnt"
+                          color="#ffffffff" width="100%"/>
+                    <text id="log_line_4" text=""
+                          font="Interface/Fonts/Default.fnt"
+                          color="#ffffffff" width="100%"/>
+                    <text id="log_line_5" text=""
+                          font="Interface/Fonts/Default.fnt"
+                          color="#ffffffff" width="100%"/>
+                </panel>
+
+            </panel>
+
         </layer>
+
     </screen>
+
 </nifty>

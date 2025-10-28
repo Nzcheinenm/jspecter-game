@@ -55,10 +55,10 @@ public class Jspectergame extends SimpleApplication {
     private DirectionalLightShadowRenderer shadowRenderer;
     private Timer gameTimer;
     private BattleSystem battleSystem;
-    private boolean inCombat = false;
-    private List<CombatCharacter> combatCharacters;
-    private CombatCharacter currentTurnCharacter;
-    private GridSystem gridSystem;
+    public boolean inCombat = false;
+    public List<CombatCharacter> combatCharacters;
+    public CombatCharacter currentTurnCharacter;
+    public GridSystem gridSystem;
     private AmbientLight ambientLight;
     private DirectionalLight sunLight;
     private PointLight torchLight;
@@ -167,9 +167,9 @@ public class Jspectergame extends SimpleApplication {
         battleSystem.showAvailableActions(currentTurnCharacter);
 
         // Обновляем UI с информацией о ходе
-//        niftyUIManager.updateCombatInfo("Бой продолжается",
-//                "Ход: " + currentTurnCharacter.getName(),
-//                currentTurnCharacter instanceof PlayerCombatCharacter ? "Ваш ход - выберите действие" : "Ход противника");
+        niftyUIManager.updateCombatInfo("Бой продолжается",
+                "Ход: " + currentTurnCharacter.getName(),
+                currentTurnCharacter instanceof PlayerCombatCharacter ? "Ваш ход - выберите действие" : "Ход противника");
 
         if (currentTurnCharacter instanceof PlayerCombatCharacter) {
             System.out.println(">>> ОЖИДАНИЕ ДЕЙСТВИЙ ИГРОКА <<<");
@@ -683,6 +683,9 @@ public class Jspectergame extends SimpleApplication {
     }
 
     public void startCombat() {
+        niftyUIManager.setCombatRound(1);
+        niftyUIManager.addCombatLog("Бой начался! Ваш ход.");
+
         inCombat = true;
         List<CombatCharacter> playerTeam = new ArrayList<>();
         List<CombatCharacter> enemyTeam = new ArrayList<>();
@@ -706,8 +709,8 @@ public class Jspectergame extends SimpleApplication {
         battleSystem.startBattle(playerTeam, enemyTeam);
 
         // ПОКАЗЫВАЕМ БОЕВОЙ UI
-//        niftyUIManager.showCombatUI();
-//        niftyUIManager.updateCombatInfo("Бой начался!", "Ход: Игрок", "Выберите действие");
+        niftyUIManager.showCombatUI();
+        niftyUIManager.updateCombatInfo("Бой начался!", "Ход: Игрок", "Выберите действие");
 
         startNextTurn();
     }
@@ -719,7 +722,7 @@ public class Jspectergame extends SimpleApplication {
 
     private void endCombat() {
         inCombat = false;
-//        niftyUIManager.hideCombatUI();
+        niftyUIManager.hideCombatUI();
         gridSystem.hideAllHighlights();
 
         combatCharacters.removeIf(character -> character.getCurrentHealth() <= 0);
