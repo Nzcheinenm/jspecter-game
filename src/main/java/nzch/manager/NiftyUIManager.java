@@ -5,12 +5,19 @@ import com.jme3.niftygui.NiftyJmeDisplay;
 import de.lessvoid.nifty.Nifty;
 import nzch.Jspectergame;
 import nzch.controller.NiftyDialogueController;
+import nzch.ui.MainMenuController;
 
 public class NiftyUIManager {
 
-    private final Jspectergame game;
+    private Jspectergame game;
     private NiftyJmeDisplay niftyDisplay;
     private NiftyDialogueController dialogueController;
+    private MainMenuController mainMenuController;
+    private Nifty nifty;
+
+    // Состояния UI
+    private boolean mainMenuVisible = true;
+    private boolean gameUIEnabled = false;
 
     public NiftyUIManager(Jspectergame game) {
         this.game = game;
@@ -26,13 +33,26 @@ public class NiftyUIManager {
                     game.getGuiViewPort()
             );
 
+            nifty = niftyDisplay.getNifty();
+
+            // Инициализируем контроллер главного меню
+            mainMenuController = new MainMenuController();
+            mainMenuController.setGame(game);
+            mainMenuController.setUIManager(this);
+
+            // Загружаем главное меню ПЕРВЫМ
+            nifty.fromXml("nifty/main_menu.xml", "main_menu", mainMenuController);
+
+            // Затем загружаем игровой UI
             dialogueController = new NiftyDialogueController();
             dialogueController.setGame(game);
-
-            Nifty nifty = niftyDisplay.getNifty();
             nifty.fromXml("nifty/dialogue.xml", "main_screen", dialogueController);
 
+            // Добавляем Nifty в viewport
             game.getGuiViewPort().addProcessor(niftyDisplay);
+
+            // Показываем главное меню при запуске
+            showMainMenu();
 
             System.out.println("Nifty GUI успешно инициализирован");
 
@@ -42,10 +62,43 @@ public class NiftyUIManager {
         }
     }
 
+    // === ГЛАВНОЕ МЕНЮ ===
+    public void showMainMenu() {
+        if (nifty != null) {
+            nifty.gotoScreen("main_menu");
+            mainMenuVisible = true;
+            gameUIEnabled = false;
+
+            // Отключаем игровое управление когда меню активно
+            if (game != null) {
+                game.setEnableGameInput(false);
+            }
+        }
+    }
+
+    public void hideMainMenu() {
+        if (nifty != null) {
+            nifty.gotoScreen("main_screen");
+            mainMenuVisible = false;
+            gameUIEnabled = true;
+
+            // Включаем игровое управление
+            game.setEnableGameInput(true);
+        }
+    }
+
+    public boolean isMainMenuVisible() {
+        return mainMenuVisible;
+    }
+
+    public boolean isGameUIEnabled() {
+        return gameUIEnabled;
+    }
+
     // === ДИАЛОГИ ===
 
     public void showDialogue(String npcName, String dialogueKey) {
-        if (dialogueController != null) {
+        if (dialogueController != null && gameUIEnabled) {
             dialogueController.showDialogue(npcName, dialogueKey);
         }
     }
@@ -75,8 +128,9 @@ public class NiftyUIManager {
     // === БОЕВОЙ UI ===
 
     public void showCombatUI() {
-        if (dialogueController != null) {
+        if (dialogueController != null && gameUIEnabled) {
             dialogueController.showCombatUI();
+            updateCombatUI();
         }
     }
 
@@ -113,6 +167,22 @@ public class NiftyUIManager {
     public void updateCombatUI() {
         if (dialogueController != null) {
             dialogueController.updateCombatInfo();
+        }
+    }
+
+    public void forceUpdateCombatUI() {
+        if (dialogueController != null && game != null && game.inCombat) {
+            dialogueController.updateCombatInfo();
+
+            if (game.currentTurnCharacter != null) {
+                String status = game.currentTurnCharacter instanceof nzch.character.PlayerCombatCharacter ?
+                        "Ваш ход" : "Ход противника";
+                dialogueController.updateTurnInfo(
+                        game.currentTurnCharacter.getName(),
+                        game.currentTurnCharacter.getCurrentHealth(),
+                        status
+                );
+            }
         }
     }
 

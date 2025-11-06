@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nifty xmlns="http://nifty-gui.lessvoid.com/nifty-gui"
+>
+
+    <useStyles filename="nifty-default-styles.xml"/>
+
+    <!-- Стили для главного меню -->
+    <style id="main_menu_button" base="button">
+        <attributes width="300px" height="60px"/>
+        <effect>
+            <onStartScreen name="move" direction="top" length="500" startDelay="200"/>
+            <onHover name="textColor" color="#ffff00"/>
+            <onHover name="font" filename="Interface/Fonts/GoodHeadPro-Medium.ttf"/>
+        </effect>
+    </style>
+
+    <style id="title_text" base="default">
+        <attributes font="Interface/Fonts/GoodHeadPro-Medium.ttf" color="#ffff00" size="48"/>
+        <effect>
+            <onStartScreen name="fade" length="1000" startDelay="0"/>
+            <onHover name="textColor" color="#ffaa00"/>
+        </effect>
+    </style>
+
+    <screen id="main_menu" controller="nzch.ui.MainMenuController">
+
+        <layer id="background_layer" childLayout="center">
+            <!-- Фоновое изображение или цвет -->
+            <panel width="100%" height="100%" backgroundColor="#1a1a2e">
+                <effect>
+                    <onStartScreen name="fade" length="1500" startDelay="0"/>
+                </effect>
+            </panel>
+        </layer>
+
+        <layer id="menu_layer" childLayout="center">
+
+            <!-- Заголовок игры -->
+            <panel width="80%" height="40%" childLayout="vertical" align="center" valign="top">
+                <text text="⚔️ SPECTER RPG ⚔️"
+                      style="title_text"
+                      align="center"
+                      marginTop="100px"/>
+
+                <text text="Изометрическое приключение"
+                      font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                      color="#00ffffff"
+                      size="24"
+                      align="center"
+                      marginTop="20px">
+                    <effect>
+                        <onStartScreen name="fade" length="1000" startDelay="500"/>
+                    </effect>
+                </text>
+
+
+            </panel>
+
+            <!-- Кнопки меню -->
+            <panel width="50%" height="40%" childLayout="vertical" align="center" valign="center">
+                <text
+                        style="title_text"
+                        id="start_button"
+                        text="🎮 НАЧАТЬ ИГРУ"
+                        align="center"
+                        marginTop="100px">
+                    <interact onClick="startGame()"/>
+                    <effect>
+                        <onStartScreen name="move" direction="left" length="500" startDelay="300"/>
+                    </effect>
+                </text>
+
+
+                <text id="load_button"
+                      text="ЗАГРУЗИТЬ"
+                      style="title_text"
+                      align="center"
+                      marginBottom="20px">
+                    <interact onClick="loadGame()"/>
+                    <effect>
+                        <onStartScreen name="move" direction="right" length="500" startDelay="400"/>
+                    </effect>
+                </text>
+
+                <text id="settings_button"
+                      text="НАСТРОЙКИ"
+                      style="title_text"
+                      align="center"
+                      marginBottom="20px">
+                    <interact onClick="showSettings()"/>
+                    <effect>
+                        <onStartScreen name="move" direction="left" length="500" startDelay="500"/>
+                    </effect>
+                </text>
+
+                <text id="exit_button"
+                      text="ВЫЙТИ"
+                      style="title_text"
+                      align="center"
+                >
+                    <interact onClick="exitGame()"/>
+                    <effect>
+                        <onStartScreen name="move" direction="right" length="500" startDelay="600"/>
+                    </effect>
+                </text>
+
+            </panel>
+
+            <!-- Нижняя панель с информацией -->
+            <panel width="100%" height="10%" childLayout="center" align="center" valign="bottom">
+                <text text="© 2025 nzch | Версия 1.0"
+                      font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                      color="#666666"
+                      size="16"
+                      align="center">
+                    <effect>
+                        <onStartScreen name="fade" length="1000" startDelay="1000"/>
+                    </effect>
+                </text>
+            </panel>
+
+        </layer>
+
+    </screen>
+
+    <!-- Экран настроек -->
+    <screen id="settings_screen" controller="nzch.ui.MainMenuController">
+
+        <layer id="settings_layer" childLayout="center">
+
+            <panel width="60%" height="70%" backgroundColor="#2d2d2de6" padding="30px"
+                   childLayout="vertical" align="center" valign="center">
+
+                <text text="⚙️ НАСТРОЙКИ"
+                      font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                      color="#ffff00ff"
+                      size="32"
+                      align="center"
+                      marginBottom="30px"/>
+
+                <!-- Настройки графики -->
+                <panel width="100%" height="200px" childLayout="vertical" marginBottom="20px">
+                    <text text="ГРАФИКА"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                          color="#00ffffff"
+                          size="20"
+                          marginBottom="10px"/>
+
+                    <panel width="100%" height="40px" childLayout="horizontal" marginBottom="10px">
+                        <text text="Разрешение:"
+                              font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                              color="#ffffffff"
+                              width="40%"/>
+                        <control id="resolution_dropdown" name="dropDown"
+                                 width="60%" height="30px"/>
+                    </panel>
+
+                    <panel width="100%" height="40px" childLayout="horizontal" marginBottom="10px">
+                        <text text="Качество текстур:"
+                              font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                              color="#ffffffff"
+                              width="40%"/>
+                        <control id="quality_dropdown" name="dropDown"
+                                 width="60%" height="30px"/>
+                    </panel>
+
+                    <panel width="100%" height="40px" childLayout="horizontal">
+                        <text text="Полный экран:"
+                              font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                              color="#ffffffff"
+                              width="40%"/>
+                        <control id="fullscreen_checkbox" name="checkbox"
+                                 width="60%" height="30px"/>
+                    </panel>
+                </panel>
+
+                <!-- Настройки звука -->
+                <panel width="100%" height="150px" childLayout="vertical" marginBottom="30px">
+                    <text text="ЗВУК"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                          color="#00ffffff"
+                          size="20"
+                          marginBottom="10px"/>
+
+                    <panel width="100%" height="40px" childLayout="horizontal" marginBottom="10px">
+                        <text text="Громкость музыки:"
+                              font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                              color="#ffffffff"
+                              width="40%"/>
+                        <control id="music_slider" name="slider"
+                                 width="60%" height="30px"/>
+                    </panel>
+
+                    <panel width="100%" height="40px" childLayout="horizontal">
+                        <text text="Громкость эффектов:"
+                              font="Interface/Fonts/GoodHeadPro-Medium.ttf"
+                              color="#ffffffff"
+                              width="40%"/>
+                        <control id="sfx_slider" name="slider"
+                                 width="60%" height="30px"/>
+                    </panel>
+                </panel>
+
+                <!-- Кнопки настроек -->
+                <panel width="100%" height="60px" childLayout="horizontal" align="center">
+                    <control id="save_settings_button" name="button" label="💾 СОХРАНИТЬ"
+                             width="45%" height="50px"
+                             onMouseClick="saveSettings()"
+                             marginRight="10px"/>
+
+                    <control id="back_button" name="button" label="↩️ НАЗАД"
+                             width="45%" height="50px"
+                             onMouseClick="backToMainMenu()"/>
+                </panel>
+
+            </panel>
+
+        </layer>
+
+    </screen>
+
+</nifty>

@@ -80,44 +80,19 @@ public class Jspectergame extends SimpleApplication {
 
     @Override
     public void simpleInitApp() {
-        combatCharacters = new ArrayList<>();
-        gameTimer = new java.util.Timer();
-
-        // Инициализация Nifty GUI ПЕРВОЙ
+        // Инициализация Nifty GUI ПЕРВОЙ (показывает главное меню)
         niftyUIManager = new NiftyUIManager(this);
 
-        // Настройка управления
+        // ОСТАЛЬНАЯ инициализация происходит только когда игрок нажмет "Начать игру"
+        // Или можно инициализировать заранее, но скрыть
+        initializeGameSystems();
+
         setupMouseInput();
         setupKeyboardInput();
         setupMouseWheel();
 
-        setupIsometricCamera();
-        setupBasicLighting();
-        setupLighting();
-        createWorld();
-        createPlayer();
-        createTargetMarker();
-        createSpecialLights();
-
-        // Инициализация систем
-        dialogueSystem = new DialogueSystem();
-        npcManager = new NPCManager(rootNode, assetManager, this);
-
-        // Инициализация боевой системы
-        gridSystem = new GridSystem(rootNode, assetManager, 40, 40);
-        battleSystem = new BattleSystem(this, gridSystem);
-
-        // Создание NPC и врагов
-        npcManager.createNPCs();
-        createEnemies();
-
-        setupCombatControls();
-
-        // Включаем сетку по умолчанию для отладки
-        gridSystem.toggleGrid();
-
-        // ТЕСТОВАЯ КНОПКА - удалить после тестирования
-        setupTestInput();
+        // Не активируем игровое управление пока активно меню
+        setEnableGameInput(false);
     }
 
     public BitmapFont getGuiFont() {
@@ -177,6 +152,55 @@ public class Jspectergame extends SimpleApplication {
         } else {
             System.out.println(">>> ВЫПОЛНЕНИЕ ХОДА ВРАГА <<<");
             executeEnemyTurn((Enemy) currentTurnCharacter);
+        }
+    }
+
+    private void initializeGameSystems() {
+        combatCharacters = new ArrayList<>();
+        gameTimer = new java.util.Timer();
+
+        // Настройка управления
+        setupMouseInput();
+        setupKeyboardInput();
+        setupMouseWheel();
+
+        setupIsometricCamera();
+        setupBasicLighting();
+        setupLighting();
+        createWorld();
+        createPlayer();
+        createTargetMarker();
+        createSpecialLights();
+
+        // Инициализация систем
+        dialogueSystem = new DialogueSystem();
+        npcManager = new NPCManager(rootNode, assetManager, this);
+
+        // Инициализация боевой системы
+        gridSystem = new GridSystem(rootNode, assetManager, 40, 40);
+        battleSystem = new BattleSystem(this, gridSystem);
+
+        // Создание NPC и врагов
+        npcManager.createNPCs();
+        createEnemies();
+
+        setupCombatControls();
+
+        // Включаем сетку по умолчанию для отладки
+        gridSystem.toggleGrid();
+
+        // ТЕСТОВАЯ КНОПКА - удалить после тестирования
+        setupTestInput();
+    }
+
+    // Метод для управления игровым вводом
+    public void setEnableGameInput(boolean enabled) {
+        if (enabled) {
+            // Включаем обработку игрового ввода
+            inputManager.setCursorVisible(false); // Скрываем курсор в игре
+        } else {
+            // Выключаем обработку игрового ввода
+            inputManager.setCursorVisible(true); // Показываем курсор для меню
         }
     }
 
@@ -599,12 +623,29 @@ public class Jspectergame extends SimpleApplication {
                 }
             }, "Option" + i);
         }
+
+        inputManager.addMapping("ToggleMenu", new KeyTrigger(KeyInput.KEY_ESCAPE));
+//        inputManager.addListener((ActionListener) (name, isPressed, tpf) -> {
+//            if (name.equals("ToggleMenu") && isPressed) {
+//                toggleMainMenu();
+//            }
+//        }, "ToggleMenu");
     }
 
     private void handleInteraction() {
         NPC nearestNPC = npcManager.findNearestNPC(player.getLocalTranslation(), 3.0f);
         if (nearestNPC != null) {
             startDialogue(nearestNPC);
+        }
+    }
+
+    private void toggleMainMenu() {
+        if (niftyUIManager != null) {
+            if (niftyUIManager.isMainMenuVisible()) {
+                niftyUIManager.hideMainMenu();
+            } else {
+                niftyUIManager.showMainMenu();
+            }
         }
     }
 
@@ -756,6 +797,12 @@ public class Jspectergame extends SimpleApplication {
 
     @Override
     public void simpleUpdate(float tpf) {
+        // Если активно главное меню - не обновляем игру
+        if (niftyUIManager != null && niftyUIManager.isMainMenuVisible()) {
+            return;
+        }
+
+        // Обычное обновление игры
         if (inCombat) {
             battleSystem.update(tpf);
         } else if (!niftyUIManager.isDialogueVisible()) {

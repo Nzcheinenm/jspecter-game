@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nifty xmlns="http://nifty-gui.lessvoid.com/nifty-gui"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+>
 
     <useStyles filename="nifty-default-styles.xml" />
 
@@ -202,7 +202,7 @@
                    align="right" valign="center" childLayout="vertical">
 
                 <text text="⚡ ДЕЙСТВИЯ"
-                      font="Interface/Fonts/Default.fnt"
+                      font="Interface/Fonts/GoodHeadPro-Medium.ttf"
                       color="#ffff00ff" width="100%"
                       marginBottom="15px"/>
 
@@ -239,7 +239,7 @@
                    align="center" valign="bottom" childLayout="vertical">
 
                 <text text="📜 ЛОГ БОЯ"
-                      font="Interface/Fonts/Default.fnt"
+                      font="Interface/Fonts/GoodHeadPro-Medium.ttf"
                       color="#8888ffff" width="100%"
                       marginBottom="5px"/>
 
@@ -247,19 +247,19 @@
                        backgroundColor="#0a0a0a88" padding="5px"
                        childLayout="vertical">
                     <text id="log_line_1" text="Бой начался!"
-                          font="Interface/Fonts/Default.fnt"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
                           color="#ffffffff" width="100%"/>
                     <text id="log_line_2" text=""
-                          font="Interface/Fonts/Default.fnt"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
                           color="#ffffffff" width="100%"/>
                     <text id="log_line_3" text=""
-                          font="Interface/Fonts/Default.fnt"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
                           color="#ffffffff" width="100%"/>
                     <text id="log_line_4" text=""
-                          font="Interface/Fonts/Default.fnt"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
                           color="#ffffffff" width="100%"/>
                     <text id="log_line_5" text=""
-                          font="Interface/Fonts/Default.fnt"
+                          font="Interface/Fonts/GoodHeadPro-Medium.ttf"
                           color="#ffffffff" width="100%"/>
                 </panel>
 
